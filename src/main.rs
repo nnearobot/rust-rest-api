@@ -1,27 +1,35 @@
-use rustapi::ThreadPool;
 use std::{
-    fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
-    thread,
+    sync::Arc,
     time::Duration,
+    thread,
 };
 
+const SERVER_URI: &str = "127.0.0.1";
 const SERVER_PORT: &str = "7878";
 const THREADS_NUMBER: usize = 20;
 
+mod thread_pool;
+mod http;
+mod routes;
+
+use http::router::Router;
+use thread_pool::*;
+
 
 fn main() {
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", SERVER_PORT)).unwrap();
+    let listener = TcpListener::bind(format!("{}:{}", SERVER_URI, SERVER_PORT)).unwrap();
     println!("Server has started on port {}", SERVER_PORT);
 
+    let router = Arc::new(routes::create("/v1"));
     let pool = ThreadPool::new(THREADS_NUMBER);
-
     for stream in listener.incoming() {
         let stream = stream.unwrap();
+        let router_clone = Arc::clone(&router);
 
         pool.execute(|| {
-            handle_connection(stream);
+            handle_connection(stream, router_clone);
         });
     }
 
@@ -29,40 +37,21 @@ fn main() {
 }
 
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream, router: Arc<Router>) {
     let buf_reader = BufReader::new(&mut stream);
 
-    /*
-    let http_request: Vec<_> = buf_reader
-    .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
-
-        let status_line = "HTTP/1.1 200 OK";
-        let contents = fs::read_to_string("hello.html").unwrap();
-        let length = contents.len();
-        
-        let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-        
-        stream.write_all(response.as_bytes()).unwrap();
-    */
-
     let request_line = buf_reader.lines().next().unwrap().unwrap();
+    let request_arr: Vec<&str> = request_line.split(' ').collect();
 
-    let (status_line, filename) = match &request_line[..] {
-        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html"),
-        "GET /sleep HTTP/1.1" => {
-            thread::sleep(Duration::from_secs(5));
-            ("HTTP/1.1 200 OK", "hello.html")
-        }
-        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
+    println!("{}",request_line); // temporarily for testing
+    thread::sleep(Duration::from_secs(5)); // temporarily for multithreading testing
+
+    let (status_line, content) = match router.get_handler(request_arr[1], request_arr[0]) {
+        Ok(handler) => handler(&request_line),
+        Err(error) => ("HTTP/1.1 404 NOT FOUND\r\n\r\n".to_string(), error),
     };
 
-    let contents = fs::read_to_string(format!("static/{}", filename)).unwrap();
-    let length = contents.len();
-
-    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
-
+    let length = content.len();
+    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{content}");
     stream.write_all(response.as_bytes()).unwrap();
 }
