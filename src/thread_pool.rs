@@ -3,17 +3,19 @@ use std::{
     thread,
 };
 
+type Job = Box<dyn FnOnce() + Send + 'static>;
+
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: Option<mpsc::Sender<Job>>,
 }
 
-type Job = Box<dyn FnOnce() + Send + 'static>;
-
 impl ThreadPool {
-    /// Create a new ThreadPool.
+    /// Creates a new ThreadPool.
     ///
-    /// The size is the number of threads in the pool.
+    /// # Arguments
+    /// 
+    /// * `size` - a number of threads in the pool.
     ///
     /// # Panics
     ///
@@ -22,9 +24,7 @@ impl ThreadPool {
         assert!(size > 0);
 
         let (sender, receiver) = mpsc::channel();
-
         let receiver = Arc::new(Mutex::new(receiver));
-
         let mut workers = Vec::with_capacity(size);
 
         for id in 0..size {
@@ -37,7 +37,7 @@ impl ThreadPool {
         }
     }
 
-
+    /// Executes a pool job.
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -46,7 +46,6 @@ impl ThreadPool {
 
         self.sender.as_ref().unwrap().send(job).unwrap();
     }
-
 }
 
 
@@ -59,11 +58,9 @@ impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let thread = thread::spawn(move || loop {
             let message = receiver.lock().unwrap().recv();
-
             match message {
                 Ok(job) => {
                     println!("Worker {id} got a job; executing.");
-
                     job();
                 }
                 Err(_) => {
