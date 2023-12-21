@@ -2,8 +2,8 @@ use std::{
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
     sync::Arc,
-    time::Duration,
-    thread,
+    //time::Duration,
+    //thread,
 };
 
 const SERVER_URI: &str = "127.0.0.1";
@@ -23,35 +23,36 @@ fn main() {
     println!("Server has started on port {}", SERVER_PORT);
 
     let router = Arc::new(routes::create("/v1"));
+
+    println!("{}", router); // temporarily for testing
+
     let pool = ThreadPool::new(THREADS_NUMBER);
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-        let router_clone = Arc::clone(&router);
+        let router = Arc::clone(&router);
 
         pool.execute(|| {
-            handle_connection(stream, router_clone);
+            handle_connection(stream, router);
         });
     }
 
     println!("Shutting down.");
 }
 
-
 fn handle_connection(mut stream: TcpStream, router: Arc<Router>) {
     let buf_reader = BufReader::new(&mut stream);
 
     let request_line = buf_reader.lines().next().unwrap().unwrap();
-    let request_arr: Vec<&str> = request_line.split(' ').collect();
+    let request_arr: Vec<&str> = request_line.split("?").nth(0).unwrap().split_whitespace().collect();
 
     println!("{}",request_line); // temporarily for testing
-    thread::sleep(Duration::from_secs(5)); // temporarily for multithreading testing
+    //thread::sleep(Duration::from_secs(5)); // temporarily for multithreading testing
 
-    let (status_line, content) = match router.get_handler(request_arr[1], request_arr[0]) {
-        Ok(handler) => handler(&request_line),
-        Err(error) => ("HTTP/1.1 404 NOT FOUND\r\n\r\n".to_string(), error),
+    let (status_line, content) = match router.handler(request_arr[1], request_arr[0]) {
+        Ok((handler, params)) => handler(&request_line, &params),
+        Err(error) => (http::NOT_FOUND.to_string(), error),
     };
 
-    let length = content.len();
-    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{content}");
+    let response = format!("{status_line}\r\n\r\n{content}");
     stream.write_all(response.as_bytes()).unwrap();
 }
