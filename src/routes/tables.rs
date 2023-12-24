@@ -1,4 +1,5 @@
 use crate::http::{router::Router, *};
+use crate::database::models::table::Table;
 
 pub fn create() -> Router<'static> {
     Router::new("/tables")
@@ -13,7 +14,10 @@ pub fn create() -> Router<'static> {
 }
 
 fn get_tables(request: &str, params: &Vec<&str>) -> (String, String) {
-    (OK_RESPONSE.to_string(), format!("Called: get_tables with no params"))
+    match Table::get_all_tables() {
+        Ok(items) => (OK_RESPONSE.to_string(), serde_json::to_string(&items).unwrap()),
+        Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error.to_string()),
+    }
 }
 
 fn get_table_orders(request: &str, params: &Vec<&str>) -> (String, String) {
