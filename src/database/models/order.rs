@@ -1,4 +1,5 @@
 use std::time::SystemTime;
+use crate::database::model::Model;
 
 /// Order model
 /// 
@@ -25,6 +26,10 @@ pub struct Order {
     pub updated_at: Option<SystemTime>,
 }
 
+impl Model for Order {
+    const TABLE_NAME: &'static str = "order";
+}
+
 impl Order {
     pub fn new<A, B>(table_id: A, menu_id: B) -> Self
     where
@@ -41,5 +46,7 @@ impl Order {
           updated_at: None,
         }
     }
+
+
 }
 

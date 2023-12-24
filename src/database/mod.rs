@@ -7,7 +7,10 @@ const DB_USER: &str = "postgres";
 const DB_PASS: &str = "postgres";
 const DB_NAME: &str = "postgres";
 
+pub const CONECTION_ERROR: &str = "DB connection error";
+
 pub mod models;
+pub mod model;
 
 
 fn db_url() -> String {
