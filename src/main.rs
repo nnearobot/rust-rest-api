@@ -6,6 +6,9 @@ use std::{
     //thread,
 };
 
+#[macro_use]
+extern crate serde_derive;
+
 const SERVER_URI: &str = "127.0.0.1";
 const SERVER_PORT: &str = "7878";
 const THREADS_NUMBER: usize = 20;
@@ -13,6 +16,7 @@ const THREADS_NUMBER: usize = 20;
 mod thread_pool;
 mod http;
 mod routes;
+mod database;
 
 use http::router::Router;
 use thread_pool::*;
