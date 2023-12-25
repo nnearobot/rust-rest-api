@@ -81,10 +81,10 @@ impl<'a> Router<'a> {
     /// 
     /// * `endpoint` - an endpoint path;
     /// * `method` - a string representation of the request method.
-    pub fn handler(&self, endpoint: &'a str, method: &str) -> Result<(&Handler, Vec<&str>), String> {
+    pub fn get_handler(&self, endpoint: &'a str, method: &str) -> Result<(&Handler, Vec<&str>), String> {
         let method = Method::from_str(method)?;
 
-        let handler = self.get_handler(Self::get_path(endpoint), 0, method, Vec::new());
+        let handler = self.handler(Self::get_path(endpoint), 0, method, Vec::new());
         return match handler {
             Ok((h, p)) => Ok((h, p)),
             Err(error) => Err(error),
@@ -92,7 +92,7 @@ impl<'a> Router<'a> {
     }
 
     /// A recursive function that iterates all the endpoint's paths of the router and returns handler for the specified method
-    fn get_handler(&self, path: Vec<&'a str>, depth: usize, method: Method, mut params: Vec<&'a str>) -> Result<(&Handler, Vec<&str>), String> {
+    fn handler(&self, path: Vec<&'a str>, depth: usize, method: Method, mut params: Vec<&'a str>) -> Result<(&Handler, Vec<&str>), String> {
 
         // If we reached a path's end (there is no next element in path),
         // we should store a handler in current router's handlers
@@ -105,7 +105,7 @@ impl<'a> Router<'a> {
 
         // We try to get a router by the key where the key is an endpoint's path.
         if self.routes.contains_key(path[depth]) {
-            return self.routes.get(path[depth]).unwrap().get_handler(path, depth + 1, method, params);
+            return self.routes.get(path[depth]).unwrap().handler(path, depth + 1, method, params);
         }
 
         // If there no such key in routes, we try to check if there is a DYN_PATH_KEY key.
@@ -113,7 +113,7 @@ impl<'a> Router<'a> {
         // And then we proceed with DYN_PATH_KEY's router.
         if self.routes.contains_key(DYN_PATH_KEY) {
             params.push(path[depth]);
-            return self.routes.get(DYN_PATH_KEY).unwrap().get_handler(path, depth + 1, method, params);
+            return self.routes.get(DYN_PATH_KEY).unwrap().handler(path, depth + 1, method, params);
         }
 
         // If no related key found this is a 404 error
