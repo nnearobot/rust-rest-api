@@ -1,4 +1,7 @@
-use crate::http::{router::Router, *};
+use crate::{
+    http::{router::Router, *}, 
+    database::models::order::Order
+};
 
 pub fn create() -> Router<'static> {
     Router::new("/orders")
@@ -10,7 +13,22 @@ pub fn create() -> Router<'static> {
 }
 
 fn post_order(request: &str, params: &Vec<&str>) -> (String, String) {
-    (OK_RESPONSE.to_string(), format!("Called: post_order no params"))
+    let params_json = request
+        .split("\r\n\r\n")
+        .last()
+        .unwrap_or_default();
+
+    let order: Result<Order, serde_json::Error> = serde_json::from_str(params_json);
+    match order {
+        Ok(order) => 
+            match Order::create_order(order) {
+                Ok(_) => {
+                    (OK_RESPONSE.to_string(), "Order created".to_string())
+                },
+                Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error.to_string()),
+            },
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error parcing json data".to_string()),
+    }
 }
 
 fn delete_order(request: &str, params: &Vec<&str>) -> (String, String) {

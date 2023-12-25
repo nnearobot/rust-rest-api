@@ -1,6 +1,8 @@
 use std::time::SystemTime;
 use crate::database::model::Model;
 
+use super::menu::Menu;
+
 /// Order model
 /// 
 /// DB table: `order`
@@ -31,22 +33,16 @@ impl Model for Order {
 }
 
 impl Order {
-    pub fn new<A, B>(table_id: A, menu_id: B) -> Self
-    where
-        A: Into<i32>,
-        B: Into<i32>,
-    {
-        Self {
-          id: None,
-          table_id: table_id.into(),
-          menu_id: menu_id.into(),
-          cooked_at: None,
-          is_deleted: None,
-          created_at: None,
-          updated_at: None,
-        }
+    pub fn create_order(order: Order) -> Result<u64, String> {
+        Self::execute(&format!("INSERT INTO \"{}\" (table_id, menu_id, cooked_at, is_deleted, created_at, updated_at)
+            VALUES (
+                $1,
+                $2,
+                NOW() + INTERVAL '1 minute' * (SELECT time_to_cook_in_minutes FROM \"{}\" WHERE id = $2),
+                FALSE,
+                NOW(),
+                NOW()
+        );", Self::TABLE_NAME, Menu::TABLE_NAME), &[&order.table_id, &order.menu_id])
     }
-
-
 }
 
