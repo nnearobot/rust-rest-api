@@ -1,11 +1,13 @@
 use crate::database::model::Model;
 
-/// Table model
+/// A model for the `table` DB table.
 /// 
 /// DB table: `table`
 /// 
-/// - id - i32 - client id
-/// - description - String - description of the client: which table it belongs to
+/// ## Fields:
+/// 
+/// - `id` - i32 - table identificator
+/// - `description` - String - description of the table, e.g. a place in the restaurant.
 
 #[derive(Serialize, Deserialize)]
 pub struct Table {
@@ -18,6 +20,7 @@ impl Model for Table {
 }
 
 impl Table {
+    /// Returns all table list.
     pub fn get_all_tables() -> Result<Vec<Table>, String> {
         let rows = Self::query_all_rows()?;
         let mut tables = Vec::new();
@@ -27,7 +30,6 @@ impl Table {
                 description: row.get(1),
             });
         }
-
         Ok(tables)
     }
 }
