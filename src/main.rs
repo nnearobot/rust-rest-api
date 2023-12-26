@@ -67,7 +67,7 @@ fn handle_connection(mut stream: TcpStream, router: Arc<Router>) {
                 Err(error) => (http::NOT_FOUND.to_string(), error),
             };
 
-            let response = format!("{status_line}{content}");
+            let response = format!("HTTP/1.1 {status_line}\r\n\r\n{content}");
             stream.write_all(response.as_bytes()).unwrap();
         }
         Err(e) => {
