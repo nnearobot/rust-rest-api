@@ -8,11 +8,12 @@ use crate::database::models::{
 /// 
 /// GET `/tables` returns a list of all tables.
 /// 
-/// GET `/:table_id_list/orders/` returns all items for a specified table list.
+/// GET `/tables/:table_id_list/orders/` returns all items for a specified table list.
 /// 
-/// GET `/:table_id/orders/:order_id` returns a specified item for a specified table number.
+/// GET `/tables/:table_id/orders/:order_id` returns a specified item for a specified table number.
 /// 
-/// DELETE `/:table_id/orders/:order_id` removes a specified item for a specified table number.
+/// DELETE `/tables/:table_id/orders/:order_id` removes a specified item for a specified table number
+/// and returns all currently preparing items for this table.
 pub fn create() -> Router<'static> {
     Router::new("/tables")
         .get("/", get_tables)
@@ -48,7 +49,7 @@ fn get_table_orders(request: &str, params: &Vec<&str>) -> (String, String) {
         return (BAD_REQUEST.to_string(), "Invalid table identificator".to_string());
     }
 
-    match Order::get_all_for_tables(table_list_i32) {
+    match Order::get_active_for_tables(table_list_i32) {
         Ok(orders) => (OK_RESPONSE.to_string(), serde_json::to_string(&orders).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
     }
@@ -89,8 +90,12 @@ fn delete_order_for_table(request: &str, params: &Vec<&str>) -> (String, String)
     match Order::delete_one_for_table(table_id, order_id) {
         Ok(rows_modified) => {
             if rows_modified > 0 {
-                return (OK_RESPONSE.to_string(), "Order deleted".to_string());
+                return match Order::get_active_for_tables(vec![table_id]) {
+                    Ok(orders) => (OK_RESPONSE.to_string(), serde_json::to_string(&orders).unwrap()),
+                    Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
+                }
             }
+
             (BAD_REQUEST.to_string(), "No order deleted".to_string())
         },
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),

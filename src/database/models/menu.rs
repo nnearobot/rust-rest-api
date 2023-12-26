@@ -29,10 +29,10 @@ impl Menu {
         let mut menu_items = Vec::new();
         for row in rows {
             menu_items.push(Menu {
-                id: row.get(0),
-                name: row.get(1),
-                description: row.get(2),
-                time_to_cook_in_minutes: row.get(3),
+                id: row.get("id"),
+                name: row.get("name"),
+                description: row.get("description"),
+                time_to_cook_in_minutes: row.get("time_to_cook_in_minutes"),
             });
         }
         Ok(menu_items)

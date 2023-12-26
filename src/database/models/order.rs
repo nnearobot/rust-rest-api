@@ -13,7 +13,8 @@ use super::menu::Menu;
 /// - `table_id` - i32 - table id this order is for
 /// - `menu_id` - i32 - menu item id
 /// - `cooked_at` - SystemTime - time when this item will be prepared
-/// - `is_deleted` - bool - is this order deleted or not deleted (default)
+/// - `is_prepader` - bool - is this item has been prepared or not
+/// - `is_deleted` - bool - is this order has been deleted or not
 /// - `created_at` - SystemTime - order time
 /// - `updated_at` - SystemTime - most recent update time.
 #[derive(Serialize, Deserialize)]
@@ -22,6 +23,7 @@ pub struct Order {
     pub table_id: i32,
     pub menu_id: i32,
     pub cooked_at: Option<SystemTime>,
+    pub is_prepared: Option<bool>,
     pub is_deleted: Option<bool>,
     pub created_at: Option<SystemTime>,
     pub updated_at: Option<SystemTime>,
@@ -32,25 +34,35 @@ impl Model for Order {
 }
 
 impl Order {
-    /// Returns all order items from database.
-    pub fn get_all_items() -> Result<Vec<Order>, String> {
-        let rows = Self::query_all_rows()?;
-        let mut orders = Vec::new();
-        for row in rows {
-            orders.push(Order {
-                id: row.get(0),
-                table_id: row.get(1),
-                menu_id: row.get(2),
-                cooked_at: row.get(3),
-                is_deleted: row.get(4),
-                created_at: row.get(5),
-                updated_at: row.get(6),
-            });
+    /// Returns all orders that are currently preparing and not removed.
+    pub fn get_all_cooking() -> Result<Vec<Order>, String> {
+        match Self::query(&format!("
+            SELECT *, (cooked_at <= NOW() AND is_deleted = false) as is_prepared
+            FROM \"{}\" 
+            WHERE is_deleted = false AND cooked_at > NOW()", Self::TABLE_NAME), &[]) {
+            Ok(rows) => {
+                let mut orders = Vec::new();
+                for row in rows {
+                    orders.push(Order {
+                        id: row.get("id"),
+                        table_id: row.get("table_id"),
+                        menu_id: row.get("menu_id"),
+                        cooked_at: row.get("cooked_at"),
+                        is_prepared: row.get("is_prepared"),
+                        is_deleted: row.get("is_deleted"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                    });
+                }
+                Ok(orders)
+            },
+            Err(error) => Err(error),
         }
-        Ok(orders)
     }
 
     /// Add an order with specified menu items to a database for specified table.
+    /// 
+    /// Returns a list of currently preparing items for a specified table.
     /// 
     /// The time when the order item will be ready is calculated by adding the time it takes to prepare the specified menu item to the time the order is created.
     /// 
@@ -88,24 +100,27 @@ impl Order {
             WHERE id = $1
             AND table_id = $2
             AND is_deleted = false
-            AND cooked_at > NOW()
-        ", Self::TABLE_NAME), &[&order_id, &table_id])
+            AND cooked_at > NOW()", Self::TABLE_NAME), &[&order_id, &table_id])
     }
 
     /// Returns all orders for specified tables.
-    pub fn get_all_for_tables(table_list: Vec<i32>) -> Result<Vec<Order>, String> {
-        match Self::query(&format!("SELECT * FROM \"{}\" WHERE table_id = ANY($1)", Order::TABLE_NAME), &[&table_list]) {
+    pub fn get_active_for_tables(table_list: Vec<i32>) -> Result<Vec<Order>, String> {
+        match Self::query(&format!("
+            SELECT *, (cooked_at <= NOW() AND is_deleted = false) as is_prepared
+            FROM \"{}\" 
+            WHERE table_id = ANY($1) AND is_deleted = false AND cooked_at > NOW()", Order::TABLE_NAME), &[&table_list]) {
             Ok(rows) => {
                 let mut orders = Vec::new();
                 for row in rows {
                     orders.push(Order {
-                        id: row.get(0),
-                        table_id: row.get(1),
-                        menu_id: row.get(2),
-                        cooked_at: row.get(3),
-                        is_deleted: row.get(4),
-                        created_at: row.get(5),
-                        updated_at: row.get(6),
+                        id: row.get("id"),
+                        table_id: row.get("table_id"),
+                        menu_id: row.get("menu_id"),
+                        cooked_at: row.get("cooked_at"),
+                        is_prepared: row.get("is_prepared"),
+                        is_deleted: row.get("is_deleted"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
                     });
                 }
                 Ok(orders)
@@ -114,20 +129,43 @@ impl Order {
         }
     }
 
-
     /// Returns an order with specified ID for specified table.
     /// 
     /// If the specified order does not belong to a specified table nothing will be returned.
     pub fn get_one_for_table(table_id: i32, order_id: i32) -> Result<Order, String> {
-        Self::query_one(&format!("SELECT * FROM \"{}\" WHERE table_id = $1 AND id = $2", Order::TABLE_NAME), &[&table_id, &order_id])
+        Self::query_one(&format!("
+            SELECT *, (cooked_at <= NOW() AND is_deleted = false) as is_prepared
+            FROM \"{}\"
+            WHERE table_id = $1 AND id = $2", Order::TABLE_NAME), &[&table_id, &order_id])
         .map(|row| Order {
-            id: row.get(0),
-            table_id: row.get(1),
-            menu_id: row.get(2),
-            cooked_at: row.get(3),
-            is_deleted: row.get(4),
-            created_at: row.get(5),
-            updated_at: row.get(6),
+            id: row.get("id"),
+            table_id: row.get("table_id"),
+            menu_id: row.get("menu_id"),
+            cooked_at: row.get("cooked_at"),
+            is_prepared: row.get("is_prepared"),
+            is_deleted: row.get("is_deleted"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
+    }
+
+    /// Returns an order with specified ID.
+    /// 
+    /// If the specified order does not belong to a specified table nothing will be returned.
+    pub fn get_one(order_id: i32) -> Result<Order, String> {
+        Self::query_one(&format!("
+            SELECT *, (cooked_at <= NOW() AND is_deleted = false) as is_prepared
+            FROM \"{}\" 
+            WHERE id = $1", Order::TABLE_NAME), &[&order_id])
+        .map(|row| Order {
+            id: row.get("id"),
+            table_id: row.get("table_id"),
+            menu_id: row.get("menu_id"),
+            cooked_at: row.get("cooked_at"),
+            is_prepared: row.get("is_prepared"),
+            is_deleted: row.get("is_deleted"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         })
     }
 }

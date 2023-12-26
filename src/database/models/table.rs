@@ -26,8 +26,8 @@ impl Table {
         let mut tables = Vec::new();
         for row in rows {
             tables.push(Table {
-                id: row.get(0),
-                description: row.get(1),
+                id: row.get("id"),
+                description: row.get("description"),
             });
         }
         Ok(tables)
