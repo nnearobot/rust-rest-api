@@ -1,5 +1,4 @@
 use postgres::{ Client, NoTls };
-use postgres::Error as PostgresError;
 
 const DB_HOST: &str = "localhost";
 const DB_PORT: usize = 5433;
@@ -7,7 +6,7 @@ const DB_USER: &str = "postgres";
 const DB_PASS: &str = "postgres";
 const DB_NAME: &str = "postgres";
 
-pub const CONECTION_ERROR: &str = "DB connection error";
+pub const CONECTION_ERROR: &str = "Database connection error";
 
 pub mod models;
 pub mod model;
@@ -17,12 +16,16 @@ fn db_url() -> String {
     format!("postgres://{}:{}@{}:{}/{}", DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME)
 }
 
-pub fn client() -> Result<Client, PostgresError> {
-    Client::connect(db_url().as_str(), NoTls)
+/// Establishes a connection with a database
+pub fn client() -> Result<Client, String> {
+    match Client::connect(db_url().as_str(), NoTls) {
+        Ok(client) => Ok(client),
+        _ => Err(CONECTION_ERROR.to_string()),
+    }
 }
 
-
-pub fn set_database() -> Result<(), PostgresError> {
+/// Warms up a database
+pub fn set_database() -> Result<(), String> {
     let mut client = client()?;
     client.batch_execute("
     CREATE TABLE \"table\" (
@@ -82,6 +85,6 @@ pub fn set_database() -> Result<(), PostgresError> {
     );
     CREATE INDEX idx_order_table_id ON \"order\"(table_id);
     CREATE INDEX idx_order_menu_id ON \"order\"(menu_id);
-    ")?;
-    Ok(())
+    ")
+    .map_err(|error| error.to_string())
 }
