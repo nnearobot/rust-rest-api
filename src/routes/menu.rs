@@ -9,7 +9,7 @@ pub fn create() -> Router<'static> {
         .get("/", get_menu)
 }
 
-fn get_menu(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_menu(_: &str, _: &Vec<&str>) -> (String, String) {
     match Menu::get_all_items() {
         Ok(items) => (OK_RESPONSE.to_string(), serde_json::to_string(&items).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),

@@ -30,14 +30,14 @@ pub fn create() -> Router<'static> {
 }
 
 
-fn get_tables(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_tables(_: &str, _: &Vec<&str>) -> (String, String) {
     match Table::get_all_tables() {
         Ok(items) => (OK_RESPONSE.to_string(), serde_json::to_string(&items).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
     }
 }
 
-fn get_table_orders(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_table_orders(_: &str, params: &Vec<&str>) -> (String, String) {
     // params[0] is a list of table IDs (or just one table ID)
     let table_list_str: Vec<&str> = params[0].split(",").collect();
     // Parse the string IDs to i32, filtering out any invalid IDs
@@ -55,7 +55,7 @@ fn get_table_orders(request: &str, params: &Vec<&str>) -> (String, String) {
     }
 }
 
-fn get_order_for_table(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_order_for_table(_: &str, params: &Vec<&str>) -> (String, String) {
     // params[0] is a table ID
     let table_id = match params[0].parse::<i32>() {
         Ok(id) => id,
@@ -74,7 +74,7 @@ fn get_order_for_table(request: &str, params: &Vec<&str>) -> (String, String) {
     }
 }
 
-fn delete_order_for_table(request: &str, params: &Vec<&str>) -> (String, String) {
+fn delete_order_for_table(_: &str, params: &Vec<&str>) -> (String, String) {
     // params[0] is a table ID
     let table_id = match params[0].parse::<i32>() {
         Ok(id) => id,

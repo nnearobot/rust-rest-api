@@ -25,14 +25,14 @@ pub fn create() -> Router<'static> {
         .post("/", post_order)
 }
 
-fn get_orders(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_orders(_: &str, _: &Vec<&str>) -> (String, String) {
     match Order::get_all_cooking() {
         Ok(items) => (OK_RESPONSE.to_string(), serde_json::to_string(&items).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
     }
 }
 
-fn get_one_order(request: &str, params: &Vec<&str>) -> (String, String) {
+fn get_one_order(_: &str, params: &Vec<&str>) -> (String, String) {
     // params[0] is an order ID
     let order_id = match params[0].parse::<i32>() {
         Ok(id) => id,
@@ -45,7 +45,7 @@ fn get_one_order(request: &str, params: &Vec<&str>) -> (String, String) {
     }
 }
 
-fn post_order(request: &str, params: &Vec<&str>) -> (String, String) {
+fn post_order(request: &str, _: &Vec<&str>) -> (String, String) {
     let params_json = request
         .split("\r\n\r\n")
         .last()
