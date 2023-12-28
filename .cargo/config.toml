@@ -1,0 +1,8 @@
+[env]
+SERVER_URI = "127.0.0.1"
+SERVER_PORT = "7878"
+DB_HOST = "localhost"
+DB_PORT = "5433"
+DB_USER = "postgres"
+DB_PASS = "postgres"
+DB_NAME = "postgres"

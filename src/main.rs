@@ -2,6 +2,7 @@ use std::{
     io::prelude::*,
     net::{TcpListener, TcpStream},
     sync::Arc,
+    env,
     //time::Duration,
     //thread,
 };
@@ -10,8 +11,9 @@ use std::{
 #[macro_use]
 extern crate serde_derive;
 
-const SERVER_URI: &str = "127.0.0.1";
-const SERVER_PORT: &str = "7878";
+const SERVER_URI: &str = env!("SERVER_URI");
+const SERVER_PORT: &str = env!("SERVER_PORT");
+
 const THREADS_NUMBER: usize = 20;
 
 mod thread_pool;
@@ -24,6 +26,12 @@ use thread_pool::*;
 
 
 fn main() {
+    // Warm up database
+    if let Err(e) = database::set_database() {
+        println!("{}", e);
+        return;
+    }
+
     let listener = TcpListener::bind(format!("{}:{}", SERVER_URI, SERVER_PORT)).unwrap();
     println!("Server has started on port {}", SERVER_PORT);
 

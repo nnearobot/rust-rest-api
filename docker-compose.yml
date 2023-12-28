@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  app:
+    container_name: restaurant-app
+    build: .
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    container_name: restaurant-db
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5434:5434'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
