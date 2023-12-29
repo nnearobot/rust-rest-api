@@ -210,7 +210,7 @@ impl<'a> Display for Router<'a> {
         fn print_routes(routes: &Routes, f: &mut Formatter<'_>, depth: usize) -> fmt::Result {
             for (key, router) in routes {
                 writeln!(f, "{:indent$}/{}", "", key, indent = depth * 2)?;
-                for (method, handler) in &router.handlers {
+                for (method, _) in &router.handlers {
                     writeln!(f, "{:indent$}-{}", "", method, indent = (depth + 1) * 2)?;
                 }
                 print_routes(&router.routes, f, depth + 1)?;
