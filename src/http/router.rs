@@ -12,6 +12,14 @@ type Handler = fn(&str, &Vec<&str>) -> (String, String);
 pub type Handlers<'a> = HashMap<Method, Handler>;
 pub type Routes<'a> = HashMap<&'a str, Router<'a>>;
 
+fn no_handler_error(method: &Method, endpoint: &str) -> String {
+    format!("No handler for {} {} found.", method, endpoint)
+}
+
+fn undefined_endpoint_error(endpoint: &str) -> String {
+    format!("Undefined endpoint {}.", endpoint)
+}
+
 /// The struct that defines endpoints and their handlers.
 pub struct Router<'a> {
     base: Option<&'a str>,
@@ -38,6 +46,7 @@ impl<'a> Router<'a> {
         let base: Option<&str> = match base {
             "" => None,
             _ => {
+                // this is actully not used:
                 if base.is_empty() {
                     panic!("Endpoint must not be empty. Use \"/\" for root.");
                 }
@@ -84,7 +93,7 @@ impl<'a> Router<'a> {
     pub fn get_handler(&self, endpoint: &'a str, method: &str) -> Result<(&Handler, Vec<&str>), String> {
         let method = Method::from_str(method)?;
 
-        let handler = self.handler(Self::get_path(endpoint), 0, method, Vec::new());
+        let handler = self.handler(Self::get_path(endpoint), 0, method, Vec::new(), &endpoint);
         return match handler {
             Ok((h, p)) => Ok((h, p)),
             Err(error) => Err(error),
@@ -92,20 +101,20 @@ impl<'a> Router<'a> {
     }
 
     /// A recursive function that iterates all the endpoint's paths of the router and returns handler for the specified method
-    fn handler(&self, path: Vec<&'a str>, depth: usize, method: Method, mut params: Vec<&'a str>) -> Result<(&Handler, Vec<&str>), String> {
+    fn handler(&self, path: Vec<&'a str>, depth: usize, method: Method, mut params: Vec<&'a str>, init_endpoint: &'a str) -> Result<(&Handler, Vec<&str>), String> {
 
         // If we reached a path's end (there is no next element in path),
         // we should store a handler in current router's handlers
         if depth == path.len() {
             return match self.handlers.get(&method) {
-                None => Err(format!("No handler for {} method found.", method)),
+                None => Err(no_handler_error(&method, &init_endpoint)),
                 Some(hh) => Ok((hh, params)),
             }
         }
 
         // We try to get a router by the key where the key is an endpoint's path.
         if self.routes.contains_key(path[depth]) {
-            return self.routes.get(path[depth]).unwrap().handler(path, depth + 1, method, params);
+            return self.routes.get(path[depth]).unwrap().handler(path, depth + 1, method, params, &init_endpoint);
         }
 
         // If there no such key in routes, we try to check if there is a DYN_PATH_KEY key.
@@ -113,11 +122,11 @@ impl<'a> Router<'a> {
         // And then we proceed with DYN_PATH_KEY's router.
         if self.routes.contains_key(DYN_PATH_KEY) {
             params.push(path[depth]);
-            return self.routes.get(DYN_PATH_KEY).unwrap().handler(path, depth + 1, method, params);
+            return self.routes.get(DYN_PATH_KEY).unwrap().handler(path, depth + 1, method, params, &init_endpoint);
         }
 
         // If no related key found this is a 404 error
-        return Err("Undefined endpoint.".to_string());
+        return Err(undefined_endpoint_error(&init_endpoint));
     }
 
     /// Add GET method handler for a specified endpoint.
@@ -219,5 +228,126 @@ impl<'a> Display for Router<'a> {
         }
 
         print_routes(&self.routes, f, 0)
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_base_start_slash() {
+        Router::new("test");
+    }
+
+    #[test]
+    fn test_empty_base() {
+        let router = Router::new("");
+        assert_eq!(router.base, None);
+    }
+
+    #[test]
+    fn test_new() {
+        let router = Router::new("/test")
+            .post("/", post_handler)
+            .post("/post/post", post_handler)
+            .get("/get", get_handler)
+            .get("/get/:key1", get_handler)
+            .get("/get/:key1/key/:key2", get_handler)
+        ;
+
+        assert_eq!(router.base, Some("test"));
+
+        // testing existing endpoints
+        let (mut handler, mut params) = router.get_handler("/test/", "post").unwrap();
+        assert_eq!(handler("", &params), ("post status".to_string(), "post message".to_string()));
+
+        (handler, params) = router.get_handler("/test/post/post/", "post").unwrap();
+        assert_eq!(handler("", &params), ("post status".to_string(), "post message".to_string()));
+
+        (handler, params) = router.get_handler("/test/get/", "get").unwrap();
+        assert_eq!(handler("", &params), ("get status".to_string(), "get message: ".to_string()));
+
+        (handler, params) = router.get_handler("/test/get/11", "get").unwrap();
+        assert_eq!(handler("", &params), ("get status".to_string(), "get message: 11".to_string()));
+
+        (handler, params) = router.get_handler("/test/get/22/key/33", "get").unwrap();
+        assert_eq!(handler("", &params), ("get status".to_string(), "get message: 22,33".to_string()));
+
+
+        // testing not found endpoints
+        let mut err = router.get_handler("/test/", "delete").unwrap_err();
+        assert_eq!(err, no_handler_error(&Method::Delete, "/test/"));
+
+        err = router.get_handler("/test/", "get").unwrap_err();
+        assert_eq!(err, no_handler_error(&Method::Get, "/test/"));
+
+        err = router.get_handler("/delete/45/post/12", "post").unwrap_err();
+        assert_eq!(err, undefined_endpoint_error("/delete/45/post/12"));
+    }
+ 
+    #[test]
+    fn test_merge() {
+        let router1 = Router::new("/test1")
+            .post("/", post_handler)
+            .get("/get/:key", get_handler)
+        ;
+
+        let router2 = Router::new("/test2")
+            .post("/", post_handler)
+            .delete("/delete", delete_handler)
+        ;
+
+        let router_merged = Router::new("/merged")
+            .get("/get/:key", get_handler)
+            .merge_from(router1)
+            .merge_from(router2)
+        ;
+
+        // testing existing endpoints
+        let (mut handler, mut params) = router_merged.get_handler("/merged/test1/", "post").unwrap();
+        assert_eq!(handler("", &params), ("post status".to_string(), "post message".to_string()));
+
+        (handler, params) = router_merged.get_handler("/merged/test1/get/2023", "get").unwrap();
+        assert_eq!(handler("", &params), ("get status".to_string(), "get message: 2023".to_string()));
+
+        (handler, params) = router_merged.get_handler("/merged/test2", "post").unwrap();
+        assert_eq!(handler("", &params), ("post status".to_string(), "post message".to_string()));
+
+        (handler, params) = router_merged.get_handler("/merged/test2/delete", "delete").unwrap();
+        assert_eq!(handler("", &params), ("delete status".to_string(), "delete message".to_string()));
+
+        (handler, params) = router_merged.get_handler("/merged/get/2024", "get").unwrap();
+        assert_eq!(handler("", &params), ("get status".to_string(), "get message: 2024".to_string()));
+
+
+        // testing not found endpoints
+        let mut err = router_merged.get_handler("/test1", "post").unwrap_err();
+        assert_eq!(err, undefined_endpoint_error("/test1"));
+
+        err = router_merged.get_handler("/test2", "post").unwrap_err();
+        assert_eq!(err, undefined_endpoint_error("/test2"));
+
+        err = router_merged.get_handler("/test2/delete", "get").unwrap_err();
+        assert_eq!(err, undefined_endpoint_error("/test2/delete"));
+
+        err = router_merged.get_handler("/merged", "post").unwrap_err();
+        assert_eq!(err, no_handler_error(&Method::Post, "/merged"));
+    }
+
+
+    fn get_handler(_: &str, params: &Vec<&str>) -> (String, String) {
+        ("get status".to_string(), format!("get message: {}", params.join(",")))
+    }
+
+    fn post_handler(_: &str, _: &Vec<&str>) -> (String, String) {
+        ("post status".to_string(), "post message".to_string())
+    }
+
+    fn delete_handler(_: &str, _: &Vec<&str>) -> (String, String) {
+        ("delete status".to_string(), "delete message".to_string())
     }
 }
