@@ -2,7 +2,7 @@ use std::{
     io::prelude::*,
     net::{TcpListener, TcpStream},
     sync::Arc,
-    env,
+    env, usize,
     //time::Duration,
     //thread,
 };
@@ -13,8 +13,7 @@ extern crate serde_derive;
 
 const SERVER_URI: &str = env!("SERVER_URI");
 const SERVER_PORT: &str = env!("SERVER_PORT");
-
-const THREADS_NUMBER: usize = 20;
+const THREADS_NUMBER: &str = env!("THREADS_NUMBER");
 
 mod thread_pool;
 mod http;
@@ -39,7 +38,7 @@ fn main() {
 
     println!("{}", router); // temporarily for testing
 
-    let pool = ThreadPool::new(THREADS_NUMBER);
+    let pool = ThreadPool::new(THREADS_NUMBER.parse::<usize>().unwrap_or(1));
     for stream in listener.incoming() {
         let stream = stream.unwrap();
         let router = Arc::clone(&router);

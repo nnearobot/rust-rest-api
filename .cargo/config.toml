@@ -1,6 +1,7 @@
 [env]
 SERVER_URI = "127.0.0.1"
 SERVER_PORT = "7878"
+THREADS_NUMBER = "20"
 DB_HOST = "localhost"
 DB_PORT = "5433"
 DB_USER = "postgres"
