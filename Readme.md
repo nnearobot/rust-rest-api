@@ -368,6 +368,9 @@ For a real-world application, we may need additional functionality, requiring mo
 - Show all orders for a table, including those already cooked - useful for final checkout, for example.
 - Archive a table's orders (when a client is finished, we must clear the table for the next client).
 
+### Integration Tests
+While not implemented in this version, it is a good practice to include integration tests that check the functionality of endpoints. Integration tests help ensure that the API components work together as expected and can identify issues that may not be visible through unit testing alone.
+
 ### Pagination
 The list of all orders may be too large if our restaurant has a large client capacity. Loading all orders at once can be a resource-intensive operation. To solve this problem, we should add pagination to the query for all orders.
 
