@@ -20,6 +20,10 @@ RUN cargo build --release
 # Use a minimal Debian image to reduce size
 FROM debian:buster-slim
 
+RUN apt-get update \
+    && apt-get install -y \
+        pkg-config libssl-dev
+
 # Copy the build artifact from the builder stage
 COPY --from=builder /app/target/release/restaurant_api /usr/src/app
 
