@@ -60,7 +60,7 @@ impl Worker {
             let message = receiver.lock().unwrap().recv();
             match message {
                 Ok(job) => {
-                    println!("Worker {id} got a job; executing.");
+                    // println!("Worker {id} got a job; executing."); // for testing purposes
                     job();
                 }
                 Err(_) => {
