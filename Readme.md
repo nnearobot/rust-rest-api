@@ -164,11 +164,9 @@ make doc
 
 ## Simulating a clients
 
-“Clients” are simulated as simple threads in a main() function calling the main server application with a variety of requests.
+“Clients” are simulated as simple threads in a main() function calling the main server application with a variety of requests. There are 10 clients running at any one time.
 
-There are 10 clients running at any one time.
-
-When `cargo run is executed, the following output appears in the console (the output from this application might be a little different every time, but it will look similar to the following):
+When `cargo run` is executed, the following output appears in the console (the output from this application might be a little different every time, but it will look similar to the following):
 
 <details>
   <summary>Click here to expand</summary>
