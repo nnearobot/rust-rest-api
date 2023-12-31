@@ -49,7 +49,7 @@ fn get_table_orders(_: &str, params: &Vec<&str>) -> (String, String) {
         return (BAD_REQUEST.to_string(), "Invalid table identificator".to_string());
     }
 
-    match Order::get_active_for_tables(table_list_i32) {
+    match Order::get_for_tables(table_list_i32) {
         Ok(orders) => (OK_RESPONSE.to_string(), serde_json::to_string(&orders).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
     }
@@ -90,7 +90,7 @@ fn delete_order_for_table(_: &str, params: &Vec<&str>) -> (String, String) {
     match Order::delete_one_for_table(table_id, order_id) {
         Ok(rows_modified) => {
             if rows_modified > 0 {
-                return match Order::get_active_for_tables(vec![table_id]) {
+                return match Order::get_for_tables(vec![table_id]) {
                     Ok(orders) => (OK_RESPONSE.to_string(), serde_json::to_string(&orders).unwrap()),
                     Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
                 }

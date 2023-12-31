@@ -26,7 +26,7 @@ pub fn create() -> Router<'static> {
 }
 
 fn get_orders(_: &str, _: &Vec<&str>) -> (String, String) {
-    match Order::get_all_cooking() {
+    match Order::get_all() {
         Ok(items) => (OK_RESPONSE.to_string(), serde_json::to_string(&items).unwrap()),
         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
     }
@@ -57,7 +57,7 @@ fn post_order(request: &str, _: &Vec<&str>) -> (String, String) {
             let table_id = order_params.table_id;
             match Order::create(order_params) {
                 Ok(_) => {
-                    return match Order::get_active_for_tables(vec![table_id]) {
+                    return match Order::get_for_tables(vec![table_id]) {
                         Ok(orders) => (OK_RESPONSE.to_string(), serde_json::to_string(&orders).unwrap()),
                         Err(error) => (INTERNAL_SERVER_ERROR.to_string(), error),
                     }

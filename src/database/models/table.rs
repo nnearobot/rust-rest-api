@@ -1,4 +1,5 @@
 use crate::database::model::Model;
+use std::fmt;
 
 /// A model for the `table` DB table.
 /// 
@@ -21,15 +22,34 @@ impl Model for Table {
 
 impl Table {
     /// Returns all table list.
-    pub fn get_all_tables() -> Result<Vec<Table>, String> {
+    pub fn get_all_tables() -> Result<Vec<TableOutput>, String> {
         let rows = Self::query_all_rows()?;
         let mut tables = Vec::new();
         for row in rows {
-            tables.push(Table {
-                id: row.get("id"),
-                description: row.get("description"),
+            tables.push(TableOutput {
+                id: row.get("table_id"),
+                description: row.get("table_description"),
             });
         }
         Ok(tables)
+    }
+}
+
+
+
+#[derive(Serialize, Deserialize)]
+pub struct TableOutput {
+    pub id: i32,
+    pub description: String,
+}
+
+impl fmt::Debug for TableOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}. {}",
+            self.id,
+            self.description
+        )
     }
 }
